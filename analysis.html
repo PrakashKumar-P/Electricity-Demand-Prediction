@@ -1,0 +1,338 @@
+<!-- analysis.html - Enhanced Advanced Analytics Dashboard -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Analysis | Nexus</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 10% 20%, #0a0f1e, #020408);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .analysis-card {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: rgba(12, 22, 35, 0.75);
+            backdrop-filter: blur(16px);
+            border-radius: 2rem;
+            border: 1px solid rgba(59, 201, 255, 0.3);
+            padding: 2rem;
+            animation: fadeInUp 0.5s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .card-header h2 {
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #3bc9ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .date-badge {
+            background: rgba(59, 201, 255, 0.15);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            color: #8acdff;
+        }
+        .kpi-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 1.2rem; 
+            margin-bottom: 2rem; 
+        }
+        .kpi-card {
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            border-radius: 1.2rem;
+            padding: 1.3rem;
+            text-align: center;
+            border: 1px solid rgba(59, 201, 255, 0.25);
+            transition: all 0.25s ease;
+            cursor: default;
+        }
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(59, 201, 255, 0.6);
+            background: rgba(0, 0, 0, 0.55);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        .kpi-icon {
+            font-size: 2rem;
+            color: #3bc9ff;
+            margin-bottom: 0.5rem;
+        }
+        .kpi-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8aadcf;
+            margin-top: 0.5rem;
+        }
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: white;
+            margin: 0.3rem 0;
+        }
+        .trend-up { color: #4cd964; }
+        .trend-down { color: #ff5c3a; }
+        
+        .summary-section {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 1.2rem;
+            padding: 1.3rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(59, 201, 255, 0.15);
+        }
+        .summary-title {
+            color: #8acdff;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .summary-content {
+            color: #c8e2ff;
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .chart-card {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 1.2rem;
+            padding: 1rem;
+            border: 1px solid rgba(59, 201, 255, 0.15);
+        }
+        .chart-card h4 {
+            color: #8acdff;
+            font-size: 0.85rem;
+            margin-bottom: 0.8rem;
+        }
+        canvas.chart-canvas {
+            max-height: 250px;
+            width: 100%;
+        }
+        
+        .btn-back { 
+            display: inline-flex; 
+            align-items: center;
+            gap: 10px;
+            margin-top: 1rem; 
+            padding: 0.7rem 1.8rem; 
+            background: linear-gradient(105deg, #0a1a2a, #07121f); 
+            border: 1px solid #3bc9ff; 
+            border-radius: 3rem; 
+            color: white; 
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-back:hover {
+            transform: translateX(-3px);
+            border-color: #7ad6ff;
+            box-shadow: 0 4px 12px rgba(59, 201, 255, 0.2);
+        }
+        
+        pre { 
+            background: rgba(0,0,0,0.5); 
+            padding: 1rem; 
+            border-radius: 1rem; 
+            overflow-x: auto; 
+            color: #b8d4f0;
+            font-family: 'Inter', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        @media (max-width: 700px) {
+            body { padding: 1rem; }
+            .analysis-card { padding: 1.2rem; }
+            .kpi-value { font-size: 1.4rem; }
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #8acdff;
+        }
+    </style>
+</head>
+<body>
+<div class="analysis-card">
+    <div class="card-header">
+        <h2><i class="fas fa-chart-pie"></i> Advanced Demand Analytics</h2>
+        <div class="date-badge">
+            <i class="far fa-calendar-alt"></i> 
+            <span id="currentDate"></span>
+        </div>
+    </div>
+    
+    <!-- KPI Metrics Grid -->
+    <div class="kpi-grid">
+        {% if kpi %}
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="kpi-value">{{ kpi.avg_demand }}</div>
+            <div class="kpi-label">Average Demand (Units)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-arrow-up trend-up"></i></div>
+            <div class="kpi-value">{{ kpi.peak_month }}</div>
+            <div class="kpi-label">Peak Month</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-arrow-down trend-down"></i></div>
+            <div class="kpi-value">{{ kpi.lowest_month }}</div>
+            <div class="kpi-label">Lowest Month</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon"><i class="fas fa-chart-simple"></i></div>
+            <div class="kpi-value {% if kpi.growth_rate > 0 %}trend-up{% elif kpi.growth_rate < 0 %}trend-down{% endif %}">
+                {{ kpi.growth_rate }}%
+            </div>
+            <div class="kpi-label">Growth Rate 
+                {% if kpi.growth_rate > 0 %}↑{% elif kpi.growth_rate < 0 %}↓{% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="loading">Loading analytics data...</div>
+        {% endif %}
+    </div>
+    
+    <!-- Graphs Section (if provided by backend) -->
+    {% if graphs %}
+    <div class="charts-grid">
+        {% for graph_name, graph_data in graphs.items() %}
+        <div class="chart-card">
+            <h4><i class="fas fa-chart-simple"></i> {{ graph_name|replace('_', ' ')|title }}</h4>
+            <canvas id="chart_{{ loop.index }}" 
+                    data-type="{{ graph_name }}"
+                    data-labels='{{ graph_data.labels | tojson | safe if graph_data.labels else "[]" }}'
+                    data-values='{{ graph_data.values | tojson | safe if graph_data.values else "[]" }}'
+                    class="chart-canvas"></canvas>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Statistical Summary -->
+    {% if summary %}
+    <div class="summary-section">
+        <div class="summary-title">
+            <i class="fas fa-chart-bar"></i> Statistical Insights
+        </div>
+        <div class="summary-content">
+            {% if summary is string %}
+                {{ summary }}
+            {% else %}
+                <pre>{{ summary | tojson(indent=2) if summary is mapping else summary }}</pre>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Back to Dashboard -->
+    <div style="text-align: center;">
+        <a href="/dashboard" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<script>
+    // Display current date
+    const dateElem = document.getElementById('currentDate');
+    if (dateElem) {
+        const now = new Date();
+        dateElem.textContent = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    }
+    
+    // Initialize any charts passed from backend
+    function initCharts() {
+        const chartCanvases = document.querySelectorAll('.chart-canvas');
+        chartCanvases.forEach(canvas => {
+            try {
+                const labels = JSON.parse(canvas.dataset.labels || '[]');
+                const values = JSON.parse(canvas.dataset.values || '[]');
+                
+                if (labels.length && values.length) {
+                    const ctx = canvas.getContext('2d');
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+                    gradient.addColorStop(0, 'rgba(59, 201, 255, 0.3)');
+                    gradient.addColorStop(1, 'rgba(59, 201, 255, 0.02)');
+                    
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                borderColor: '#3bc9ff',
+                                borderWidth: 2,
+                                backgroundColor: gradient,
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 3,
+                                pointBackgroundColor: '#3bc9ff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                    titleColor: '#3bc9ff'
+                                }
+                            },
+                            scales: {
+                                x: { ticks: { color: '#8aadcf', font: { size: 10 } }, grid: { color: 'rgba(59,201,255,0.1)' } },
+                                y: { ticks: { color: '#8aadcf', font: { size: 10 } }, grid: { color: 'rgba(59,201,255,0.1)' } }
+                            }
+                        }
+                    });
+                }
+            } catch(e) {
+                console.warn('Chart initialization error:', e);
+            }
+        });
+    }
+    
+    // Run when DOM is ready
+    document.addEventListener('DOMContentLoaded', initCharts);
+</script>
+</body>
+</html>

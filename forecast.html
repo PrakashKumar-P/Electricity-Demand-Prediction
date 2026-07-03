@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Demand Explorer | Nexus Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 30%, #0a0f1e, #020408);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .blur-bg {
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 201, 255, 0.08) 0%, transparent 70%);
+            animation: slowRotate 30s infinite alternate ease-in-out;
+            z-index: 0;
+        }
+
+        @keyframes slowRotate {
+            0% { transform: translate(0%, 0%) rotate(0deg); }
+            100% { transform: translate(5%, 8%) rotate(5deg); }
+        }
+
+        .particles {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(59, 201, 255, 0.15);
+            border-radius: 50%;
+            animation: floatParticle 15s infinite ease-in-out;
+        }
+
+        @keyframes floatParticle {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+            20% { opacity: 0.5; }
+            80% { opacity: 0.2; }
+            100% { transform: translateY(-100px) translateX(50px); opacity: 0; }
+        }
+
+        .prediction-container {
+            position: relative;
+            z-index: 10;
+            max-width: 750px;
+            width: 100%;
+            animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .prediction-card {
+            background: rgba(12, 22, 35, 0.75);
+            backdrop-filter: blur(20px);
+            border-radius: 2rem;
+            border: 1px solid rgba(59, 201, 255, 0.35);
+            padding: 2rem;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .prediction-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 201, 255, 0.6);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px dashed rgba(59, 201, 255, 0.25);
+        }
+
+        .card-header i {
+            font-size: 2rem;
+            color: #3bc9ff;
+        }
+
+        .card-header h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, #9bd4ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        /* Calendar Picker Styles */
+        .calendar-section {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(59, 201, 255, 0.15);
+        }
+
+        .picker-container {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .month-select, .year-select {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(59, 201, 255, 0.3);
+            border-radius: 0.8rem;
+            padding: 0.6rem 1rem;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .month-select:hover, .year-select:hover {
+            border-color: #3bc9ff;
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .month-select:focus, .year-select:focus {
+            outline: none;
+            border-color: #3bc9ff;
+            box-shadow: 0 0 10px rgba(59, 201, 255, 0.3);
+        }
+
+        .fetch-btn {
+            background: linear-gradient(105deg, #0b2a42, #0a1a2c);
+            border: 1px solid #3bc9ff;
+            padding: 0.6rem 1.2rem;
+            border-radius: 2rem;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fetch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 201, 255, 0.3);
+        }
+
+        .info-badge {
+            background: rgba(59, 201, 255, 0.15);
+            padding: 0.3rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            color: #8acdff;
+            text-align: center;
+            margin-top: 0.8rem;
+        }
+
+        .chart-wrapper {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1.8rem;
+            border: 1px solid rgba(59, 201, 255, 0.15);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+            font-size: 0.7rem;
+            color: #8aadcf;
+        }
+
+        canvas#bgChart {
+            max-height: 130px;
+            width: 100%;
+        }
+
+        .error-message {
+            background: rgba(255, 70, 50, 0.2);
+            border: 1px solid rgba(255, 70, 50, 0.5);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #ff9e85;
+            text-align: center;
+        }
+
+        .prediction-section {
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        .month-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(59, 201, 255, 0.12);
+            padding: 0.4rem 1.2rem;
+            border-radius: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .type-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 1rem;
+            margin-left: 0.5rem;
+        }
+
+        .type-badge.historical {
+            background: rgba(76, 217, 100, 0.2);
+            color: #4cd964;
+        }
+
+        .type-badge.forecast {
+            background: rgba(59, 201, 255, 0.2);
+            color: #3bc9ff;
+        }
+
+        .prediction-month {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #8acdff;
+        }
+
+        .prediction-value {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #8acdff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin: 0.5rem 0;
+        }
+
+        .unit {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #8aadcf;
+        }
+
+        .confidence-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #6f9bcb;
+        }
+
+        .factors-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.8rem 0;
+        }
+
+        .factor-card {
+            background: rgba(0, 20, 35, 0.5);
+            border-radius: 1rem;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid rgba(59, 201, 255, 0.2);
+            transition: all 0.25s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .factor-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 201, 255, 0.6);
+            background: rgba(0, 30, 50, 0.7);
+            box-shadow: 0 8px 20px rgba(59, 201, 255, 0.2);
+        }
+
+        .factor-icon {
+            font-size: 1.8rem;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .factor-title {
+            font-size: 0.75rem;
+            color: #8aadcf;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.3rem;
+        }
+
+        .factor-status {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #3bc9ff;
+            margin-bottom: 0.3rem;
+        }
+
+        .factor-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: white;
+            background: rgba(59, 201, 255, 0.15);
+            padding: 0.2rem 0.5rem;
+            border-radius: 1rem;
+            display: inline-block;
+            margin-top: 0.3rem;
+        }
+
+        .click-hint {
+            font-size: 0.6rem;
+            color: #6f9bcb;
+            margin-top: 0.3rem;
+            opacity: 0.7;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.75rem 1.8rem;
+            border-radius: 3rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(105deg, #0b2a42, #0a1a2c);
+            border: 1px solid #3bc9ff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 201, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(8, 20, 30, 0.8);
+            border: 1px solid rgba(59, 201, 255, 0.5);
+            color: #d2ecff;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            background: #0f2a3c;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(59, 201, 255, 0.3);
+            border-top-color: #3bc9ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 550px) {
+            body { padding: 1rem; }
+            .prediction-card { padding: 1.2rem; }
+            .prediction-value { font-size: 2.5rem; }
+            .factors-container { gap: 0.5rem; }
+            .factor-card { padding: 0.6rem; }
+            .picker-container { flex-direction: column; }
+            .month-select, .year-select, .fetch-btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="blur-bg"></div>
+<div class="particles" id="particles"></div>
+
+<div class="prediction-container">
+    <div class="prediction-card">
+        <div class="card-header">
+            <i class="fas fa-chart-line"></i>
+            <h2>Electricity Demand Prediction For Vellore City</h2>
+        </div>
+
+        <!-- Calendar Picker -->
+        <div class="calendar-section">
+            <div class="picker-container">
+                <select id="monthSelect" class="month-select">
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+                
+                <select id="yearSelect" class="year-select">
+                    <option value="2023">2023</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                    <option value="2027">2027</option>
+                    <option value="2028">2028</option>
+                </select>
+                
+                <button id="fetchDataBtn" class="fetch-btn">
+                    <i class="fas fa-search"></i> Get Demand
+                </button>
+            </div>
+            <div class="info-badge">
+                <i class="fas fa-info-circle"></i> Past months show historical data | Future months show Demand predictions
+            </div>
+        </div>
+
+        <!-- Chart Area -->
+        <div class="chart-wrapper">
+            <div class="chart-header">
+                <span><i class="fas fa-chart-simple"></i> Historical trend analysis</span>
+                <span><i class="fas fa-arrow-trend-up"></i> 12-month pattern</span>
+            </div>
+            <canvas id="bgChart"
+                data-months='{{ months | tojson | safe if months else "[]" }}'
+                data-values='{{ values | tojson | safe if values else "[]" }}'>
+            </canvas>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> <span id="errorText"></span>
+        </div>
+
+        <div id="loadingIndicator" style="text-align: center; display: none;">
+            <div class="loading-spinner"></div>
+            <p style="color: #8acdff; margin-top: 0.5rem;">Fetching demand data...</p>
+        </div>
+
+        <!-- Prediction Result -->
+        <div class="prediction-section" id="resultSection">
+            <div class="month-container">
+                <i class="far fa-calendar-alt"></i>
+                <span class="prediction-month" id="resultMonth">May 2026</span>
+                <span class="type-badge forecast" id="resultType">Forecast</span>
+            </div>
+            <div class="prediction-value" id="resultValue">
+                <span class="unit">Units</span>
+            </div>
+            <div class="confidence-badge" id="confidenceBadge">
+                <i class="fas fa-chart-simple"></i>
+                <!-- <span>Forecast Confidence: 94.2%</span>
+                <i class="fas fa-check-circle" style="color: #4cd964;"></i> -->
+            </div>
+        </div>
+
+        <!-- Factors Grid -->
+        <div class="factors-container">
+            <div class="factor-card" id="tempCard">
+                <div class="factor-icon">🌡️</div>
+                <div class="factor-title">Temperature</div>
+                <div class="factor-status" id="tempStatus">Impact Applied</div>
+                <div class="factor-value" id="tempValueDisplay">24.5°C</div>
+                <!-- <div class="click-hint"><i class="fas fa-mouse-pointer"></i> Click for details</div> -->
+            </div>
+            
+            <div class="factor-card" id="weekendCard">
+                <div class="factor-icon">📅</div>
+                <div class="factor-title">Weekend</div>
+                <div class="factor-status" id="weekendStatus">Considered</div>
+                <div class="factor-value" id="weekendValueDisplay">8 days</div>
+                <!-- <div class="click-hint"><i class="fas fa-mouse-pointer"></i> Click for details</div> -->
+            </div>
+            
+            <div class="factor-card" id="holidayCard">
+                <div class="factor-icon">🎉</div>
+                <div class="factor-title">Holidays</div>
+                <div class="factor-status" id="holidayStatus">Considered</div>
+                <div class="factor-value" id="holidayValueDisplay">Seasonal</div>
+                <!-- <div class="click-hint"><i class="fas fa-mouse-pointer"></i> Click for details</div> -->
+            </div>
+        </div>
+
+        <div class="button-group">
+            <a href="/scenario" class="btn btn-primary">
+                <i class="fas fa-flask"></i> Scenario Based
+            </a>
+            <a href="/dashboard" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = window.location.origin;
+    
+    const monthSelect = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    const fetchBtn = document.getElementById('fetchDataBtn');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const errorMessage = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    const resultSection = document.getElementById('resultSection');
+    const resultMonth = document.getElementById('resultMonth');
+    const resultValue = document.getElementById('resultValue');
+    const resultType = document.getElementById('resultType');
+    const confidenceBadge = document.getElementById('confidenceBadge');
+    
+    const tempValueDisplay = document.getElementById('tempValueDisplay');
+    const tempStatus = document.getElementById('tempStatus');
+    const weekendValueDisplay = document.getElementById('weekendValueDisplay');
+    const weekendStatus = document.getElementById('weekendStatus');
+    const holidayValueDisplay = document.getElementById('holidayValueDisplay');
+    const holidayStatus = document.getElementById('holidayStatus');
+    
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    let defaultMonth = currentMonth + 1;
+    let defaultYear = currentYear;
+    if (defaultMonth > 12) {
+        defaultMonth = 1;
+        defaultYear++;
+    }
+    monthSelect.value = defaultMonth;
+    yearSelect.value = defaultYear;
+    
+// Replace the existing fetchDemandData function with this updated version
+
+    async function fetchDemandData(month, year) {
+        loadingIndicator.style.display = 'block';
+        errorMessage.style.display = 'none';
+        resultSection.style.opacity = '0.5';
+        
+        // IMPORTANT: Create date objects correctly
+        const selectedDate = new Date(year, month - 1, 1);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Get the last date from your dataset (April 2026)
+        // This should be passed from your backend
+        const lastDataDate = new Date(2026, 3, 1); // April 1, 2026 (month is 0-indexed)
+        
+        // Debug logging
+        console.log("Selected Date:", selectedDate);
+        console.log("Today:", today);
+        console.log("Last Data Date:", lastDataDate);
+        
+        // Determine if it's past or future based on your dataset's last date
+        // Any month AFTER April 2026 is forecast
+        const isPast = selectedDate <= lastDataDate;
+        
+        console.log("Is Past?", isPast);
+        
+        const endpoint = isPast ? '/get_historical_demand' : '/get_forecast_demand';
+        console.log("Calling endpoint:", endpoint);
+        
+        try {
+            const response = await fetch(`${endpoint}?month=${month}&year=${year}`);
+            const data = await response.json();
+            
+            console.log("Response data:", data);
+            
+            if (data.success) {
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                'July', 'August', 'September', 'October', 'November', 'December'];
+                resultMonth.innerText = `${monthNames[month-1]} ${year}`;
+                resultValue.innerHTML = `${data.demand.toLocaleString()} <span class="unit">Units</span>`;
+                
+                if (isPast) {
+                    resultType.innerText = 'Historical';
+                    resultType.className = 'type-badge historical';
+                    confidenceBadge.style.display = 'none';
+                } else {
+                    resultType.innerText = 'Forecast';
+                    resultType.className = 'type-badge forecast';
+                    confidenceBadge.style.display = 'flex';
+                }
+                
+                if (data.factors) {
+                    if (data.factors.temp) {
+                        tempValueDisplay.innerText = data.factors.temp;
+                        tempStatus.innerText = data.factors.temp_status || 'Impact Applied';
+                    }
+                    if (data.factors.weekend) {
+                        weekendValueDisplay.innerText = data.factors.weekend;
+                        weekendStatus.innerText = data.factors.weekend_status || 'Considered';
+                    }
+                    if (data.factors.holiday) {
+                        holidayValueDisplay.innerText = data.factors.holiday;
+                        holidayStatus.innerText = data.factors.holiday_status || 'Considered';
+                    }
+                }
+                
+                resultSection.style.opacity = '1';
+            } else {
+                showError(data.message || 'Failed to fetch demand data');
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            showError('Network error. Please try again.');
+        } finally {
+            loadingIndicator.style.display = 'none';
+        }
+    }
+        
+    function showError(message) {
+        errorText.innerText = message;
+        errorMessage.style.display = 'block';
+        resultSection.style.opacity = '1';
+    }
+    
+    fetchBtn.addEventListener('click', () => {
+        const month = parseInt(monthSelect.value);
+        const year = parseInt(yearSelect.value);
+        fetchDemandData(month, year);
+    });
+    
+    fetchDemandData(defaultMonth, defaultYear);
+    
+    function createParticles() {
+        const container = document.getElementById('particles');
+        if (!container) return;
+        
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            const size = Math.random() * 3 + 1;
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 15 + 's';
+            particle.style.animationDuration = Math.random() * 12 + 8 + 's';
+            container.appendChild(particle);
+        }
+    }
+    
+    const canvas = document.getElementById("bgChart");
+    
+    if(canvas){
+        let months = [];
+        let values = [];
+        
+        try {
+            months = JSON.parse(canvas.dataset.months || '[]');
+            values = JSON.parse(canvas.dataset.values || '[]');
+        } catch(e) {
+            console.warn("Chart data parse error:", e);
+            months = ['Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025',
+                      'Jul 2025', 'Aug 2025', 'Sep 2025', 'Oct 2025', 'Nov 2025', 'Dec 2025'];
+            values = [380000, 385000, 390000, 395000, 398000, 400000, 405000, 410000, 408000, 402000, 395000, 399000];
+        }
+        
+        if (months.length > 0 && values.length > 0) {
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 130);
+            gradient.addColorStop(0, 'rgba(59, 201, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(59, 201, 255, 0.02)');
+            
+            new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: months,
+                    datasets: [{
+                        data: values,
+                        borderColor: "#3bc9ff",
+                        backgroundColor: gradient,
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: "#3bc9ff"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#3bc9ff',
+                            bodyColor: '#d2ecff',
+                            callbacks: {
+                                label: function(context) {
+                                    return `Demand: ${context.raw.toLocaleString()} Units`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            ticks: { color: '#8aadcf', font: { size: 8 }, maxRotation: 45, minRotation: 45 },
+                            grid: { color: 'rgba(59, 201, 255, 0.08)' }
+                        },
+                        y: { 
+                            ticks: { 
+                                color: '#8aadcf', 
+                                font: { size: 8 },
+                                callback: function(value) {
+                                    return (value / 1000).toFixed(0) + 'k';
+                                }
+                            },
+                            grid: { color: 'rgba(59, 201, 255, 0.08)' }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', createParticles);
+</script>
+</body>
+</html>

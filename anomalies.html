@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Anomaly Detection | Nexus Energy Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0f1e 0%, #03060c 100%);
+            min-height: 100vh;
+            padding: 1.5rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background Particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 100, 70, 0.15);
+            border-radius: 50%;
+            animation: floatParticle 20s infinite ease-in-out;
+        }
+
+        @keyframes floatParticle {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+            20% { opacity: 0.5; }
+            80% { opacity: 0.3; }
+            100% { transform: translateY(-100px) translateX(50px); opacity: 0; }
+        }
+
+        /* Main Container */
+        .anomaly-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Header Section */
+        .header {
+            margin-bottom: 2rem;
+            animation: slideDown 0.5s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, #ff9e85);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 i {
+            background: linear-gradient(135deg, #ff7a5c, #ff5c3a);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #8aadcf;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Stats Cards Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.5s ease 0.1s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-card {
+            background: rgba(12, 22, 35, 0.6);
+            backdrop-filter: blur(12px);
+            border-radius: 1.2rem;
+            padding: 1.2rem;
+            border: 1px solid rgba(59, 201, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(59, 201, 255, 0.4);
+            background: rgba(12, 22, 35, 0.8);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8aadcf;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .stat-unit {
+            font-size: 0.8rem;
+            color: #8aadcf;
+            margin-left: 4px;
+        }
+
+        .stat-trend {
+            font-size: 0.7rem;
+            margin-top: 0.3rem;
+        }
+
+        .trend-up { color: #ff7a5c; }
+        .trend-down { color: #4cd964; }
+
+        /* Main Content Card */
+        .content-card {
+            background: rgba(12, 22, 35, 0.7);
+            backdrop-filter: blur(16px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 100, 70, 0.25);
+            padding: 1.8rem;
+            animation: fadeInUp 0.5s ease 0.2s both;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title h2 {
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-badge {
+            background: rgba(255, 70, 50, 0.2);
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            color: #ff9e85;
+            border: 0.5px solid rgba(255, 90, 60, 0.3);
+        }
+
+        /* Timeline / Chart Area */
+        .timeline-area {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 0.5px solid rgba(255, 120, 80, 0.2);
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #c0a08a;
+            margin-bottom: 0.8rem;
+        }
+
+        canvas#trendCanvas {
+            max-height: 120px;
+            width: 100%;
+        }
+
+        /* Anomaly List */
+        .anomaly-list {
+            max-height: 450px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .anomaly-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .anomaly-list::-webkit-scrollbar-track {
+            background: rgba(255, 100, 70, 0.1);
+            border-radius: 10px;
+        }
+        .anomaly-list::-webkit-scrollbar-thumb {
+            background: #ff7a5c;
+            border-radius: 10px;
+        }
+
+        /* Anomaly Item - Redesigned */
+        .anomaly-card-item {
+            background: linear-gradient(135deg, rgba(25, 35, 50, 0.8), rgba(20, 28, 40, 0.9));
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            border: 1px solid rgba(255, 100, 70, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .anomaly-card-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(135deg, #ff5c3a, #ff7a5c);
+            transition: width 0.3s ease;
+        }
+
+        .anomaly-card-item:hover {
+            transform: translateX(8px);
+            border-color: rgba(255, 100, 70, 0.5);
+            background: linear-gradient(135deg, rgba(35, 45, 60, 0.9), rgba(25, 35, 50, 0.95));
+        }
+
+        .anomaly-card-item:hover::before {
+            width: 6px;
+        }
+
+        .anomaly-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .month-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #ffb08c;
+        }
+
+        .severity-badge {
+            background: rgba(255, 70, 50, 0.25);
+            padding: 0.2rem 0.7rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #ff7a5c;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.8rem;
+            margin: 0.8rem 0;
+        }
+
+        .metric {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #c8e2ff;
+        }
+
+        .metric i {
+            width: 24px;
+            color: #ff7a5c;
+        }
+
+        .metric strong {
+            color: white;
+            font-weight: 700;
+        }
+
+        .extra-consumption {
+            background: rgba(255, 70, 50, 0.15);
+            border-radius: 0.8rem;
+            padding: 0.6rem 0.8rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            border: 0.5px solid rgba(255, 100, 70, 0.3);
+        }
+
+        .extra-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: #ffb08c;
+        }
+
+        .extra-value {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #ff5c3a;
+        }
+
+        /* Success State */
+        .success-state {
+            text-align: center;
+            padding: 3rem;
+            background: linear-gradient(135deg, rgba(80, 200, 120, 0.1), rgba(80, 200, 120, 0.05));
+            border-radius: 1rem;
+            border: 1px solid rgba(80, 200, 120, 0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(80, 200, 120, 0.2); }
+            50% { box-shadow: 0 0 0 10px rgba(80, 200, 120, 0); }
+        }
+
+        .success-state i {
+            font-size: 3.5rem;
+            color: #4cd964;
+            margin-bottom: 1rem;
+        }
+
+        .success-state p {
+            font-size: 1.1rem;
+            color: #b4e0c0;
+            font-weight: 500;
+        }
+
+        .success-state small {
+            color: #8aadcf;
+            font-size: 0.8rem;
+        }
+
+        /* Button */
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.8rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(105deg, #0f1f2e, #09131f);
+            border: 1px solid rgba(59, 201, 255, 0.5);
+            padding: 0.7rem 1.8rem;
+            border-radius: 3rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: white;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            border-color: #3bc9ff;
+            box-shadow: 0 6px 20px rgba(59, 201, 255, 0.2);
+        }
+
+        .btn-danger {
+            border-color: rgba(255, 100, 70, 0.5);
+        }
+
+        .btn-danger:hover {
+            border-color: #ff7a5c;
+            box-shadow: 0 6px 20px rgba(255, 100, 70, 0.2);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #6a7a8a;
+        }
+
+        /* Loading Animation */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #8aadcf;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .content-card { padding: 1rem; }
+            .metrics-grid { grid-template-columns: 1fr; }
+            .stat-value { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="anomaly-container">
+    <!-- Header -->
+    <div class="header">
+        <h1>
+            <i class="fas fa-shield-alt"></i>
+            Anomaly Detection Center
+        </h1>
+        <!-- <div class="subtitle">
+            <i class="fas fa-microchip"></i>
+            AI-powered real-time monitoring · Threshold-based alerting
+        </div> -->
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-label"><i class="fas fa-chart-line"></i> MONITORING PERIOD</div>
+            <div class="stat-value">Last 12 Months</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label"><i class="fas fa-flag-checkered"></i> ALERT STATUS</div>
+            <div class="stat-value" id="alertStatus">—</div>
+        </div>
+        <!--<div class="stat-card">
+            <div class="stat-label"><i class="fas fa-brain"></i> DETECTION MODEL</div>
+            <div class="stat-value">Isolation Forest</div>
+            <div class="stat-trend">Confidence: 94%</div>
+        </div> -->
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-card">
+        <div class="card-title">
+            <h2>
+                <i class="fas fa-exclamation-triangle" style="color: #ff7a5c;"></i>
+                Over-Consumption Alerts
+            </h2>
+            <div class="alert-badge" id="alertCountBadge">
+                <i class="fas fa-bell"></i> Loading...
+            </div>
+        </div>
+
+        <!-- Anomaly Detection Result -->
+        {% if error %}
+            <div class="loading">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>{{ error }}</p>
+            </div>
+        {% elif anomalies and anomalies|length > 0 %}
+            <!-- Anomaly List -->
+            <div class="anomaly-list">
+                {% for item in anomalies %}
+                <div class="anomaly-card-item" data-severity="high">
+                    <div class="anomaly-header">
+                        <div class="month-badge">
+                            <i class="fas fa-calendar-alt"></i>
+                            {{ item.month }}
+                        </div>
+                        <div class="severity-badge">
+                            <i class="fas fa-fire"></i> Critical Deviation
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <i class="fas fa-chart-line"></i>
+                            Expected Range: <strong>{{ item.range_low }} – {{ item.range_high }} Units</strong>
+                        </div>
+                        <div class="metric">
+                            <i class="fas fa-tachometer-alt"></i>
+                            Actual Usage: <strong>{{ item.actual }} Units</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="extra-consumption">
+                        <div class="extra-label">
+                            <i class="fas fa-arrow-up"></i>
+                            Excess Consumption Detected
+                        </div>
+                        <div class="extra-value">
+                            +{{ item.extra }} Units
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="success-state">
+                <i class="fas fa-check-circle"></i>
+                <p>✅ All Clear — No Anomalies Detected</p>
+                <small>All monitored periods are within normal operational thresholds</small>
+            </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="button-group">
+            <a href="/dashboard" class="btn-primary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <a href="/forecast" class="btn-primary btn-danger">
+                <i class="fas fa-chart-line"></i> View Forecast
+            </a>
+        </div>
+    </div>
+
+    <div class="footer">
+        <i class="fas fa-shield-virus"></i> Real-time anomaly detection · Automated alerting · ML-powered insights
+    </div>
+</div>
+
+<script>
+    // Update alert count badge and status
+    anomalies = {{ anomalies | tojson | safe }};
+    alertCountBadge = document.getElementById('alertCountBadge');
+    alertStatus = document.getElementById('alertStatus');
+    
+    if (alertCountBadge) {
+        if (anomalies && anomalies.length > 0) {
+            alertCountBadge.innerHTML = `<i class="fas fa-bell"></i> ${anomalies.length} Alert(s) Active`;
+            alertCountBadge.style.background = 'rgba(255, 70, 50, 0.3)';
+            alertCountBadge.style.color = '#ff9e85';
+            
+            if (alertStatus) {
+                alertStatus.innerHTML = '<span style="color: #ff7a5c;"><i class="fas fa-exclamation-circle"></i> Active Alerts</span>';
+                alertStatus.style.color = '#ff7a5c';
+            }
+        } else {
+            alertCountBadge.innerHTML = '<i class="fas fa-check-circle"></i> No Alerts';
+            alertCountBadge.style.background = 'rgba(80, 200, 120, 0.2)';
+            alertCountBadge.style.color = '#8fdfb0';
+            
+            if (alertStatus) {
+                alertStatus.innerHTML = '<span style="color: #4cd964;"><i class="fas fa-shield-alt"></i> All Systems Normal</span>';
+            }
+        }
+    }
+
+    // Create floating particles
+    function createParticles() {
+        const container = document.getElementById('particles');
+        if (!container) return;
+        
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            const size = Math.random() * 4 + 1;
+            particle.style.width = size + 'px';
+            particle.style.height = size + 'px';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = Math.random() * 15 + 10 + 's';
+            container.appendChild(particle);
+        }
+    }
+
+    // Add hover sound effect simulation (visual feedback only)
+    const anomalyItems = document.querySelectorAll('.anomaly-card-item');
+    anomalyItems.forEach((item, index) => {
+        item.addEventListener('mouseenter', () => {
+            item.style.transform = 'translateX(8px)';
+        });
+        item.addEventListener('mouseleave', () => {
+            item.style.transform = 'translateX(0)';
+        });
+        
+        // Staggered animation delay
+        item.style.animation = `slideDown 0.3s ease ${index * 0.05}s both`;
+    });
+
+    // Initialize particles on load
+    document.addEventListener('DOMContentLoaded', createParticles);
+
+    // Optional: Add click handler for anomaly items (expand details)
+    anomalyItems.forEach(item => {
+        item.addEventListener('click', () => {
+            item.classList.toggle('expanded');
+        });
+    });
+</script>
+
+<style>
+    /* Additional animations */
+    .anomaly-card-item {
+        animation: slideIn 0.4s ease forwards;
+        opacity: 0;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    .anomaly-card-item.expanded {
+        background: linear-gradient(135deg, rgba(45, 55, 75, 0.95), rgba(35, 45, 65, 0.95));
+    }
+    
+    /* Glow effect on hover */
+    .btn-primary {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-primary::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        transform: translate(-50%, -50%);
+        transition: width 0.5s, height 0.5s;
+    }
+    
+    .btn-primary:active::after {
+        width: 200px;
+        height: 200px;
+    }
+</style>
+
+</body>
+</html>
